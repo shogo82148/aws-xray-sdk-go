@@ -12,9 +12,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/aws/aws-xray-sdk-go/header"
-	"github.com/aws/aws-xray-sdk-go/strategy/exception"
-	"github.com/aws/aws-xray-sdk-go/strategy/sampling"
+	"github.com/shogo82148/aws-xray-sdk-go/header"
+	"github.com/shogo82148/aws-xray-sdk-go/strategy/exception"
+	"github.com/shogo82148/aws-xray-sdk-go/strategy/sampling"
 )
 
 // Segment provides the resource's name, details about the request, and details about the work done.

@@ -8,7 +8,7 @@
 
 package ec2
 
-import "github.com/aws/aws-xray-sdk-go/awsplugins/ec2"
+import "github.com/shogo82148/aws-xray-sdk-go/awsplugins/ec2"
 
 // Origin is the type of AWS resource that runs your application.
 const Origin = ec2.Origin

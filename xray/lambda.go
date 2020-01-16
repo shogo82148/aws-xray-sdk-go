@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aws/aws-xray-sdk-go/header"
-	"github.com/aws/aws-xray-sdk-go/internal/logger"
+	"github.com/shogo82148/aws-xray-sdk-go/header"
+	"github.com/shogo82148/aws-xray-sdk-go/internal/logger"
 )
 
 // LambdaTraceHeaderKey is key to get trace header from context.

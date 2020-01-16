@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-xray-sdk-go/header"
+	"github.com/shogo82148/aws-xray-sdk-go/header"
 	"github.com/stretchr/testify/assert"
 )
 

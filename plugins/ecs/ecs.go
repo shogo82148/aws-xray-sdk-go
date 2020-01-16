@@ -8,7 +8,7 @@
 
 package ecs
 
-import "github.com/aws/aws-xray-sdk-go/awsplugins/ecs"
+import "github.com/shogo82148/aws-xray-sdk-go/awsplugins/ecs"
 
 // Origin is the type of AWS resource that runs your application.
 const Origin = ecs.Origin

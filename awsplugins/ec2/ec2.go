@@ -11,8 +11,8 @@ package ec2
 import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-xray-sdk-go/internal/logger"
-	"github.com/aws/aws-xray-sdk-go/internal/plugins"
+	"github.com/shogo82148/aws-xray-sdk-go/internal/logger"
+	"github.com/shogo82148/aws-xray-sdk-go/internal/plugins"
 )
 
 // Origin is the type of AWS resource that runs your application.

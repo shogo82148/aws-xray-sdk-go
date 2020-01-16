@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	xraySvc "github.com/aws/aws-sdk-go/service/xray"
-	"github.com/aws/aws-xray-sdk-go/utils"
+	"github.com/shogo82148/aws-xray-sdk-go/utils"
 )
 
 const defaultRule = "Default"

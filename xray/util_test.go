@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-xray-sdk-go/header"
+	"github.com/shogo82148/aws-xray-sdk-go/header"
 )
 
 func NewTestDaemon() (context.Context, *TestDaemon) {

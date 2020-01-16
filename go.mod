@@ -1,4 +1,4 @@
-module github.com/aws/aws-xray-sdk-go
+module github.com/shogo82148/aws-xray-sdk-go
 
 go 1.11
 

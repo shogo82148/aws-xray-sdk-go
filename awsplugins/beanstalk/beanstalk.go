@@ -12,8 +12,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/aws/aws-xray-sdk-go/internal/logger"
-	"github.com/aws/aws-xray-sdk-go/internal/plugins"
+	"github.com/shogo82148/aws-xray-sdk-go/internal/logger"
+	"github.com/shogo82148/aws-xray-sdk-go/internal/plugins"
 )
 
 // Origin is the type of AWS resource that runs your application.
