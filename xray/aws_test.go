@@ -204,6 +204,7 @@ func testClientWithoutSegment(ctx context.Context, td *TestDaemon, t *testing.T,
 
 func testAWSDataRace(ctx context.Context, td *TestDaemon, t *testing.T, svc *lambda.Lambda) {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	ctx, seg := BeginSegment(ctx, "TestSegment")
 
 	var wg sync.WaitGroup
