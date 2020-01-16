@@ -9,6 +9,7 @@
 package xray
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 )
+
+func newRequest(ctx context.Context, method, url string, body io.Reader) (context.Context, *Segment, *http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	ctx, root := BeginSegment(ctx, "Test")
+	req = req.WithContext(ctx)
+	return ctx, root, req, nil
+}
+
+func httpDoTest(ctx context.Context, client *http.Client, method, url string, body io.Reader) error {
+	ctx, root, req, err := newRequest(ctx, method, url, body)
+	if err != nil {
+		return err
+	}
+	defer root.Close(nil)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(ioutil.Discard, resp.Body)
+	return nil
+}
 
 func TestNilClient(t *testing.T) {
 	c := Client(nil)
@@ -50,24 +77,12 @@ func TestRoundTrip(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
+	client := Client(nil)
 
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	root.Close(nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer resp.Body.Close()
 
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
@@ -132,23 +147,12 @@ func TestRoundTripWithError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	client := Client(nil)
+
+	err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	root.Close(nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer resp.Body.Close()
 
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
@@ -172,37 +176,19 @@ func TestRoundTripWithError(t *testing.T) {
 func TestRoundTripWithThrottle(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
-
-	const content = `429 - Nothing to see`
-	const responseContentLength = len(content)
-
-	ch := make(chan XRayHeaders, 1)
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch <- ParseHeadersForTest(r.Header)
 		w.WriteHeader(http.StatusTooManyRequests)
 		if _, err := w.Write([]byte(content)); err != nil {
 			panic(err)
-		}
 	}))
 	defer ts.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	client := Client(nil)
+
+	err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	root.Close(nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer resp.Body.Close()
 
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
@@ -240,23 +226,12 @@ func TestRoundTripFault(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	client := Client(nil)
+
+	err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	root.Close(nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer resp.Body.Close()
 
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
@@ -281,19 +256,9 @@ func TestBadRoundTrip(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, "unknown-scheme://localhost:8000", nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	req = req.WithContext(ctx)
-	_, doErr := client.Do(req)
-	root.Close(nil)
+	client := Client(nil)
+
+	doErr := httpDoTest(ctx, client, http.MethodGet, "unknown-scheme://localhost:8000", nil)
 	assert.Error(t, doErr)
 
 	seg, err := td.Recv()
@@ -310,19 +275,9 @@ func TestBadRoundTripDial(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
-	ctx, root := BeginSegment(ctx, "Test")
-	req, err := http.NewRequest(http.MethodGet, "http://domain.invalid:8000", nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	req = req.WithContext(ctx)
-	_, doErr := client.Do(req)
-	root.Close(nil)
+	client := Client(nil)
+
+	doErr := httpDoTest(ctx, client, http.MethodGet, "http://domain.invalid:8000", nil)
 	assert.Error(t, doErr)
 
 	seg, err := td.Recv()
@@ -355,38 +310,27 @@ func TestRoundTripReuseDatarace(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &http.Client{
-		Transport: &roundtripper{
-			Base: http.DefaultTransport,
-		},
-	}
+	client := Client(nil)
+
 	var wg sync.WaitGroup
 	n := 100
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			ctx, root := BeginSegment(ctx, "Test")
-			req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-			if !assert.NoError(t, err) {
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if !assert.NoError(t, err) {
-				return
-			}
-			defer resp.Body.Close() // make net/http/transport.go connection reuse
-			_, err = io.Copy(ioutil.Discard, resp.Body)
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 			assert.NoError(t, err)
 			root.Close(nil)
 		}()
 	}
+	wg.Wait()
+
 	for i := 0; i < n; i++ {
 		_, err := td.Recv()
 		assert.NoError(t, err)
 	}
-	wg.Wait()
 }
 
 func TestRoundTripReuseTLSDatarace(t *testing.T) {
@@ -409,27 +353,18 @@ func TestRoundTripReuseTLSDatarace(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			ctx, root := BeginSegment(ctx, "Test")
-			req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-			if !assert.NoError(t, err) {
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if !assert.NoError(t, err) {
-				return
-			}
-			defer resp.Body.Close() // make net/http/transport.go connection reuse
-			_, err = io.Copy(ioutil.Discard, resp.Body)
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 			assert.NoError(t, err)
-			root.Close(nil)
 		}()
 	}
+	wg.Wait()
+
 	for i := 0; i < n; i++ {
 		_, err := td.Recv()
 		assert.NoError(t, err)
 	}
-	wg.Wait()
 }
 
 func TestRoundTripReuseHTTP2Datarace(t *testing.T) {
@@ -465,34 +400,16 @@ func TestRoundTripReuseHTTP2Datarace(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			ctx, root := BeginSegment(ctx, "Test")
-			req, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-			if !assert.NoError(t, err) {
-				return
-			}
-			req = req.WithContext(ctx)
-			resp, err := client.Do(req)
-			if !assert.NoError(t, err) {
-				return
-			}
-			defer resp.Body.Close() // make net/http/transport.go connection reuse
-			_, err = io.Copy(ioutil.Discard, resp.Body)
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 			assert.NoError(t, err)
-			root.Close(nil)
 		}()
 	}
+	wg.Wait()
 
-	var errorCount int
 	for i := 0; i < n; i++ {
 		_, err := td.Recv()
-		if err != nil {
-			errorCount++
-		}
+		assert.NoError(t, err)
 	}
-	t.Logf("error count: %d", errorCount)
-	if errorCount >= n/2 {
-		t.Errorf("%d time(s) failed", errorCount)
-	}
-
-	wg.Wait()
 }

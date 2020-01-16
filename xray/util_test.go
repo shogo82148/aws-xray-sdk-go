@@ -17,10 +17,18 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/shogo82148/aws-xray-sdk-go/header"
 )
+
+func TestMain(m *testing.M) {
+	os.Unsetenv("AWS_XRAY_DAEMON_ADDRESS")
+	os.Unsetenv("AWS_XRAY_CONTEXT_MISSING")
+	os.Unsetenv("AWS_XRAY_TRACING_NAME")
+	os.Exit(m.Run())
+}
 
 func NewTestDaemon() (context.Context, *TestDaemon) {
 	c := make(chan *result, 200)
@@ -38,14 +46,20 @@ func NewTestDaemon() (context.Context, *TestDaemon) {
 		cancel: cancel,
 	}
 	emitter, err := NewDefaultEmitter(conn.LocalAddr().(*net.UDPAddr))
-
-	// XXX: I want not to touch the environment value here... (@shogo82148)
-	os.Setenv("AWS_XRAY_DAEMON_ADDRESS", conn.LocalAddr().String())
-	defer os.Unsetenv("AWS_XRAY_DAEMON_ADDRESS")
-
 	ctx, err = ContextWithConfig(ctx, Config{
 		Emitter:    emitter,
 		DaemonAddr: conn.LocalAddr().String(),
+	if err != nil {
+		panic(fmt.Sprintf("xray: failed to created emitter: %v", err))
+	}
+
+	ctx, err = ContextWithConfig(ctx, Config{
+		Emitter:                emitter,
+		DaemonAddr:             conn.LocalAddr().String(),
+		ServiceVersion:         "TestVersion",
+		SamplingStrategy:       &TestSamplingStrategy{},
+		ContextMissingStrategy: &TestContextMissingStrategy{},
+		StreamingStrategy:      &TestStreamingStrategy{},
 	})
 	if err != nil {
 		panic(fmt.Sprintf("xray: failed to configure: %v", err))

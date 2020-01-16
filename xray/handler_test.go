@@ -49,13 +49,6 @@ func TestHandlerWithContextForRootHandler(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
 
-	// ctx, err := ContextWithConfig(ctx, Config{
-	// 	ServiceVersion: "1.0.0",
-	// })
-	// if !assert.NoError(t, err) {
-	// 	return
-	// }
-
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(`200 - OK`)); err != nil {
@@ -79,6 +72,9 @@ func TestHandlerWithContextForRootHandler(t *testing.T) {
 	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
+	// make sure all connections are closed.
+	ts.Close()
+
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
 		return
@@ -89,20 +85,12 @@ func TestHandlerWithContextForRootHandler(t *testing.T) {
 	assert.Equal(t, ts.URL+"/", seg.HTTP.Request.URL)
 	assert.Equal(t, "127.0.0.1", seg.HTTP.Request.ClientIP)
 	assert.Equal(t, "UnitTest", seg.HTTP.Request.UserAgent)
-	// FIXME: @shogo82148
-	// assert.Equal(t, "1.0.0", seg.Service.Version)
+	assert.Equal(t, "TestVersion", seg.Service.Version)
 }
 
 func TestHandlerWithContextForNonRootHandler(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
-
-	// ctx, err := ContextWithConfig(ctx, Config{
-	// 	ServiceVersion: "1.0.0",
-	// })
-	// if !assert.NoError(t, err) {
-	// 	return
-	// }
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -124,6 +112,9 @@ func TestHandlerWithContextForNonRootHandler(t *testing.T) {
 	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
+	// make sure all connections are closed.
+	ts.Close()
+
 	seg, err := td.Recv()
 	if !assert.NoError(t, err) {
 		return
@@ -132,8 +123,7 @@ func TestHandlerWithContextForNonRootHandler(t *testing.T) {
 	assert.Equal(t, "fakeid", seg.TraceID)
 	assert.Equal(t, "reqid", seg.ParentID)
 	assert.Equal(t, true, seg.Sampled)
-	// FIXME: @shogo82148
-	// assert.Equal(t, "1.0.0", seg.Service.Version)
+	assert.Equal(t, "TestVersion", seg.Service.Version)
 }
 
 func TestXRayHandlerPreservesOptionalInterfaces(t *testing.T) {
