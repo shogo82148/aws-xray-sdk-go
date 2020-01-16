@@ -114,22 +114,7 @@ func (s *sqlTestSuite) TestPasswordURL() {
 	}
 
 	s.mockDB("postgres://user:password@host:5432/database")
-	s.Equal("", s.db.connectionString)
-	s.Equal("postgres://user@host:1234/database", s.db.url)
-}
-
-func (s *sqlTestSuite) TestPasswordURL() {
-	s.mockDB("postgres://user:password@host:1234/database")
-	s.mockPSQL(nil)
-	s.connect()
-
-	ctx, seg := BeginSegment(context.Background(), "test")
-	defer seg.Close(nil)
-	conn, err := s.db.Conn(ctx)
-	s.Require().NoError(err)
-	defer conn.Close()
-	s.Require().NoError(s.mock.ExpectationsWereMet())
-	s.Require().True(checked)
+	s.True(checked)
 }
 
 func (s *sqlTestSuite) TestPasswordURLQuery() {

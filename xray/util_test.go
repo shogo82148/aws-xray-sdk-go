@@ -47,13 +47,6 @@ func NewTestDaemon() (context.Context, *TestDaemon) {
 	}
 	emitter, err := NewDefaultEmitter(conn.LocalAddr().(*net.UDPAddr))
 	ctx, err = ContextWithConfig(ctx, Config{
-		Emitter:    emitter,
-		DaemonAddr: conn.LocalAddr().String(),
-	if err != nil {
-		panic(fmt.Sprintf("xray: failed to created emitter: %v", err))
-	}
-
-	ctx, err = ContextWithConfig(ctx, Config{
 		Emitter:                emitter,
 		DaemonAddr:             conn.LocalAddr().String(),
 		ServiceVersion:         "TestVersion",

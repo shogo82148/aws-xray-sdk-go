@@ -176,10 +176,17 @@ func TestRoundTripWithError(t *testing.T) {
 func TestRoundTripWithThrottle(t *testing.T) {
 	ctx, td := NewTestDaemon()
 	defer td.Close()
+
+	const content = `429 - Nothing to see`
+	const responseContentLength = len(content)
+
+	ch := make(chan XRayHeaders, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch <- ParseHeadersForTest(r.Header)
 		w.WriteHeader(http.StatusTooManyRequests)
 		if _, err := w.Write([]byte(content)); err != nil {
 			panic(err)
+		}
 	}))
 	defer ts.Close()
 
@@ -322,7 +329,6 @@ func TestRoundTripReuseDatarace(t *testing.T) {
 			defer cancel()
 			err := httpDoTest(ctx, client, http.MethodGet, ts.URL, nil)
 			assert.NoError(t, err)
-			root.Close(nil)
 		}()
 	}
 	wg.Wait()
