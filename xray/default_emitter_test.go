@@ -121,7 +121,6 @@ func TestStreamingSegmentsTreeHasOnlyOneBranch(t *testing.T) {
 }
 
 func randomString(strlen int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
 	const chars = "0123456789abcdef"
 	result := make([]byte, strlen)
 	for i := 0; i < strlen; i++ {

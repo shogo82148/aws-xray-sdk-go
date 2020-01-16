@@ -9,12 +9,68 @@
 package utils
 
 import (
+	crand "crypto/rand"
+	"encoding/binary"
 	"math/rand"
+	"sync"
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+type lockedSource struct {
+	mu  sync.Mutex
+	src rand.Source
+}
+
+func (src *lockedSource) Seed(seed int64) {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	src.src.Seed(seed)
+}
+
+func (src *lockedSource) Int63() int64 {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	return src.src.Int63()
+}
+
+type lockedSource64 struct {
+	mu  sync.Mutex
+	src rand.Source64
+}
+
+func (src *lockedSource64) Seed(seed int64) {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	src.src.Seed(seed)
+}
+
+func (src *lockedSource64) Int63() int64 {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	return src.src.Int63()
+}
+
+func (src *lockedSource64) Uint64() uint64 {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	return src.src.Uint64()
+}
+
+var globalRand = newRand()
+
+func newRand() *rand.Rand {
+	var seed int64
+	var buf [8]byte
+	if _, err := crand.Read(buf[:]); err != nil {
+		seed = time.Now().UnixNano()
+	} else {
+		seed = int64(binary.BigEndian.Uint64(buf[:]))
+	}
+	src := rand.NewSource(seed)
+	if src64, ok := src.(rand.Source64); ok {
+		return rand.New(&lockedSource64{src: src64})
+	}
+	return rand.New(&lockedSource{src: src})
 }
 
 // Rand is an interface for a set of methods that return random value.
@@ -30,17 +86,17 @@ type DefaultRand struct{}
 // Int63n returns, as an int64, a non-negative pseudo-random number in [0,n)
 // from the default Source.
 func (r *DefaultRand) Int63n(n int64) int64 {
-	return rand.Int63n(n)
+	return globalRand.Int63n(n)
 }
 
 // Intn returns, as an int, a non-negative pseudo-random number in [0,n)
 // from the default Source.
 func (r *DefaultRand) Intn(n int) int {
-	return rand.Intn(n)
+	return globalRand.Intn(n)
 }
 
 // Float64 returns, as a float64, a pseudo-random number in [0.0,1.0)
 // from the default Source.
 func (r *DefaultRand) Float64() float64 {
-	return rand.Float64()
+	return globalRand.Float64()
 }
