@@ -41,7 +41,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          path: src/github.com/aws/aws-xray-sdk-go
+          path: src/github.com/shogo82148/aws-xray-sdk-go
 
       - name: Install Dependencies
         run: |
@@ -54,11 +54,11 @@ jobs:
         env:
           GO111MODULE: "on"
         shell: bash
-        working-directory: src/github.com/aws/aws-xray-sdk-go
+        working-directory: src/github.com/shogo82148/aws-xray-sdk-go
 
       - name: Test
         run: make test-with-race
         env:
           GO111MODULE: "on"
         shell: bash
-        working-directory: src/github.com/aws/aws-xray-sdk-go
+        working-directory: src/github.com/shogo82148/aws-xray-sdk-go
