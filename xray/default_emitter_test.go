@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net"
 	"testing"
 	"time"
 
@@ -139,4 +140,29 @@ func getTestSegment() string {
 		traceID,
 		randomString(16))
 	return message
+}
+
+func BenchmarkDefaultEmitter(b *testing.B) {
+	// make sure `Header` has enough capacity
+	// to reproduce https://github.com/aws/aws-xray-sdk-go/pull/173
+	// minimum capacity is guaranteed by Go specs, but actual capacity is not.
+	Header = append(make([]byte, 0, 1024), Header...)
+
+	seg := &Segment{
+		ParentSegment: &Segment{
+			Sampled: true,
+		},
+	}
+	b.RunParallel(func(pb *testing.PB) {
+		emitter, err := NewDefaultEmitter(&net.UDPAddr{
+			IP:   net.IPv4(127, 0, 0, 1),
+			Port: 2000,
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+		for pb.Next() {
+			emitter.Emit(seg)
+		}
+	})
 }
