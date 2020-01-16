@@ -67,8 +67,10 @@ func TestAWS(t *testing.T) {
 
 	// Run all combinations of constructors + tests.
 	for _, cons := range constructors {
+		cons := cons
 		t.Run(cons.name, func(t *testing.T) {
 			for _, test := range tests {
+				test := test
 				t.Run(test.name, func(t *testing.T) {
 					test.test(t, cons.constructor(fakeSession(t, test.failConn)))
 				})
@@ -186,29 +188,30 @@ func testClientWithoutSegment(t *testing.T, svc *lambda.Lambda) {
 }
 
 func testAWSDataRace(t *testing.T, svc *lambda.Lambda) {
-	Configure(Config{ContextMissingStrategy: &TestContextMissingStrategy{},DaemonAddr: "localhost:3000"})
+	Configure(Config{ContextMissingStrategy: &TestContextMissingStrategy{}, DaemonAddr: "localhost:3000"})
 	defer ResetConfig()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	ctx, seg := BeginSegment(ctx, "TestSegment")
 
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < 5; i++ {
-		if i!=3 && i!=2{
+		if i != 3 && i != 2 {
 			wg.Add(1)
 		}
 		go func(i int) {
-			if i!=3 && i!=2{
-				time.Sleep(1)
+			if i != 3 && i != 2 {
+				time.Sleep(time.Nanosecond)
 				defer wg.Done()
 			}
 			_, seg := BeginSubsegment(ctx, "TestSubsegment1")
-			time.Sleep(1)
+			time.Sleep(time.Nanosecond)
 			seg.Close(nil)
 			svc.ListFunctionsWithContext(ctx, &lambda.ListFunctionsInput{})
-			if i== 3 || i==2{
+			if i == 3 || i == 2 {
 				cancel() // cancel context
 			}
 		}(i)
