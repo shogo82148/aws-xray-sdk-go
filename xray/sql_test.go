@@ -229,8 +229,6 @@ func (s *sqlTestSuite) TestWeirderPasswordURL() {
 	defer conn.Close()
 	s.Require().NoError(s.mock.ExpectationsWereMet())
 	s.Require().True(checked)
-	s.Equal("", s.db.connectionString)
-	s.Equal("user@host:1234/database", s.db.url)
 }
 
 func (s *sqlTestSuite) TestPasswordlessConnectionString() {
